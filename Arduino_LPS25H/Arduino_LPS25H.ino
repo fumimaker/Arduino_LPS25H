@@ -3,18 +3,22 @@
 uint8_t DEVICE_ADDRESS = 0x5D;//SA0=VDD
 bool WHO_AM_I = false;
 
-uint16_t zero_height = 0;
-
+float zero_height = 0;
+float rc = 0;
+boolean calibrated = false;
 void calibrate_zero(void){
-  uint32_t zero=0;
+  float zero=0;
   for(int i=0; i<50; i++){
     zero += get_height();
+    //Serial.println(zero);
     delay(100);
   }
   zero_height = zero/50;
+  //Serial.println(zero_height);
+  calibrated = true;
 }
 
-uint32_t get_height(void){
+float get_height(void){
   int i;
   uint8_t RegTbl[5];
 
@@ -73,6 +77,26 @@ void setup()
 
 void loop()
 {
+  uint16_t val=0;
+  if(calibrated){
+    int tmp;
+    tmp = 0;
+    rc = rc*0.98+ get_height()*0.02;
+    tmp = (int)(rc - zero_height);
+    if(tmp<0){
+      tmp = 0;
+    }
+    val = (uint16_t)tmp;
+//    Serial.print("rc=");
+//    Serial.print(rc);
+//    Serial.print(" zerop=");
+//    Serial.print(zero_height);
+//    Serial.print(" val=");
+//    Serial.println(val);
+    delay(10);
+  }
+  
+  
   if(Serial.available()>0){
     char mozi = Serial.read();
     switch (mozi){
@@ -83,32 +107,23 @@ void loop()
         calibrate_zero();
         Serial.write('O');
       }
+      //Serial.print("zero=");
+      //Serial.println(zero_height);
       break;
 
     case 'G':
-      uint32_t tmp;
-      tmp = 0;
-      for (int i = 0; i < 10; i++)
-      {
-        tmp += get_height();
-      }
-      tmp = tmp / 10;
-      int16_t val;
-      val = (int16_t)(tmp - zero_height);
-      if(val<0){
-        val = 0;
-      }
-
       uint8_t H;
       H = (val & 0xF0) >> 8;
       uint8_t L;
       L = val & 0x0F;
-
-      Serial.write(H);
-      Serial.write(L);
+      //Serial.println(val);
+      Serial.print(H);
+      Serial.println(L);
+      
       break;
 
     default:
+      
       break;
     }
   }
