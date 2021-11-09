@@ -1,5 +1,5 @@
 #include <Wire.h>
-
+//#define debug
 uint8_t DEVICE_ADDRESS = 0x5D;//SA0=VDD
 bool WHO_AM_I = false;
 
@@ -34,12 +34,15 @@ void initLPS25H(void){
 
 void calibrate_zero(void){
   float zero=0;
-  for(int i=0; i<50; i++){
+  for(int i=0; i<10; i++){
     zero += get_height();
     delay(100);
   }
-  zero_height = zero/50;
-  //Serial.println(zero_height);
+  zero_height = zero/10;
+  #ifdef debug
+  Serial.print("zero ");
+  Serial.println(zero_height);
+  #endif
 }
 
 float get_height(void){
@@ -81,33 +84,53 @@ void loop()
       initLPS25H();
       if(!WHO_AM_I){
         Serial.write('N');
+        //Serial.println("N");
       } else {
         calibrate_zero();
         Serial.write('O');
+        //Serial.print("Hello Wolrd");
+        //Serial.println("O");
       }
       break;
 
     case 'G':
-      float tmp;
-      tmp = 0;
-      for (int i = 0; i < 10; i++)
-      {
-        tmp += get_height();
-      }
-      tmp = tmp / 10;
-      int16_t val;
-      val = (int16_t)(tmp - zero_height);
+      float tmp = 0;
+//      for (int i = 0; i < 10; i++){
+//        tmp += get_height();
+//      }
+//      tmp = tmp / 10;
+      float val = get_height();
+      val = get_height() - zero_height;
       if(val<0){
         val = 0;
       }
 
-      uint8_t H;
-      H = (val & 0xFF) >> 8;
-      uint8_t L;
-      L = val & 0xFF;
-      //Serial.println(val);
+      #ifdef debug
+      Serial.print("float ");
+      Serial.println(val);
+      #endif
+      
+      uint16_t temp = (uint16_t)val;
+      //H = (val & 0xFF) >> 8;
+      #ifdef debug
+      Serial.print("temp ");
+      Serial.println(temp);
+      #endif
+      uint8_t H = (temp>>8)&0xFF;
+      uint8_t L = temp & 0xFF;
+      #ifdef debug
+      Serial.print("H:");
+      Serial.print(H,HEX);
+      Serial.print(" L:");
+      Serial.println(L,HEX);
+      #endif
+      
+      #ifndef debug
       Serial.write(H);
       Serial.write(L);
+      //Serial.println(temp);
+      #endif
+      
       break;
 
     default:
